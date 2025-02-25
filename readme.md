@@ -97,7 +97,7 @@ Paaiškinimas:
 **gyvunai.txt** – failo pavadinimas, kuriame atliekami pakeitimai.
 
 
-12. Parašykite skriptą ir sukonfiguruokite jį kaip servisą --> žingsniai kaipo tai padaryti https://www.squash.io/executing-bash-script-at-startup-in-ubuntu-linux/
+### 12. Parašykite skriptą ir sukonfiguruokite jį kaip servisą --> žingsniai kaipo tai padaryti https://www.squash.io/executing-bash-script-at-startup-in-ubuntu-linux/
 
 
 **Tikslas:** Suprasti, kaip saugiai prisijungti prie nuotolinių serverių ir perkelti failus.  
