@@ -87,7 +87,7 @@
 ---
 ### 11. **Sed texto pakeitimas**
 
-- Komanda, kurią panaudojai, tik atvaizduoja pakeistą tekstą terminale, bet jo neišsaugo faile. Norėdamas išsaugoti pakeitimus faile, turi naudoti -i (in-place) parinktį, kuri pakeičia tekstą tiesiogiai faile.
+
 
 Sukurkite faila gyvunai.txt ir įrašykite su vim ar nano tesktą **suo**, pakeiskite faile suo teksta į kate komanda su sed:
 
