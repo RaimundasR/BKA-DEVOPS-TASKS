@@ -84,5 +84,18 @@
     ```bash
     scp failas.txt vartotojas@serveris:/kelias/
     ```  
+---
+### 11. **Sed texto pakeitimas**
+
+- Komanda, kurią panaudojai, tik atvaizduoja pakeistą tekstą terminale, bet jo neišsaugo faile. Norėdamas išsaugoti pakeitimus faile, turi naudoti -i (in-place) parinktį, kuri pakeičia tekstą tiesiogiai faile.
+
+Sukurkite faila gyvunai.txt ir įrašykite su vim ar nano tesktą **suo**, pakeiskite faile suo teksta į kate komanda su sed:
+
+Paaiškinimas:
+**-i** – nurodo, kad pakeitimai turi būti įrašyti tiesiai į failą,
+**'s/suo/kate/g'** **– s** reiškia „substituciją“, g reiškia „globalų pakeitimą“, kuris pakeičia visus suo pasikartojimus kiekvienoje eilutėje,
+**gyvunai.txt** – failo pavadinimas, kuriame atliekami pakeitimai.
+
+
 
 **Tikslas:** Suprasti, kaip saugiai prisijungti prie nuotolinių serverių ir perkelti failus.  
