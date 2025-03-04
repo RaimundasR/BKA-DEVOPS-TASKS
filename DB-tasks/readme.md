@@ -239,7 +239,7 @@ app.listen(PORT, HOST, () => console.log(`Frontend running on http://${HOST}:${P
 ### **5. Restart the Application**
 
 ```sh
-docker-compose down && cd
+docker-compose down && docker-compose up --build -d
 ```
 
 ### **6. Expected Outcome**
@@ -250,5 +250,5 @@ docker-compose down && cd
 - The app runs in Docker containers.
 - API requests now dynamically use the correct server IP, preventing `localhost` issues.
 
-Try again and let me know if you need more debugging! 🚀
+
 
