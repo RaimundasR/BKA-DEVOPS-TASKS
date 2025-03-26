@@ -288,6 +288,8 @@ Norint testuoti šią API naudojant **Postman**, reikės:
    - Pasirinkti tab'ą **Headers**
    - Pridėti `Key`: `Authorization`
    - Pridėti `Value`: `Bearer <jusu_sugeneruotas_token>`
+   - Pridėti `Accept`: `application/json`
+   - Pridėti `Content-Type`: `application/json`
 
 ### Pavyzdžiai:
 
