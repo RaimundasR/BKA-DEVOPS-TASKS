@@ -24,7 +24,7 @@
             "Sid": "AllowRunInstancesWithTag",
             "Effect": "Allow",
             "Action": "ec2:RunInstances",
-            "Resource": "*",
+            "Resource": "arn:aws:ec2:*:318043933524:instance/*",
             "Condition": {
                 "StringEquals": {
                     "aws:RequestTag/Department": "DevOps"
@@ -41,12 +41,12 @@
             "Effect": "Allow",
             "Action": "ec2:RunInstances",
             "Resource": [
-                "arn:aws:ec2:eu-north-1:318043933524:security-group/*",
-                "arn:aws:ec2:eu-north-1:318043933524:subnet/*",
-                "arn:aws:ec2:eu-north-1::image/*",
-                "arn:aws:ec2:eu-north-1:318043933524:network-interface/*",
-                "arn:aws:ec2:eu-north-1:318043933524:volume/*",
-                "arn:aws:ec2:eu-north-1:318043933524:key-pair/*"
+                "arn:aws:ec2:*:318043933524:security-group/*",
+                "arn:aws:ec2:*:318043933524:subnet/*",
+                "arn:aws:ec2:*::image/*",
+                "arn:aws:ec2:*:318043933524:network-interface/*",
+                "arn:aws:ec2:*:318043933524:volume/*",
+                "arn:aws:ec2:*:318043933524:key-pair/*"
             ]
         },
         {
@@ -93,6 +93,7 @@
         }
     ]
 }
+
 
 ```
 - Priskirkite šią politiką naudotojui arba grupei – tai ABAC naudojimas realiame scenarijuje.
