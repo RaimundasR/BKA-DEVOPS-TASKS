@@ -18,20 +18,82 @@
 - Politikos pavyzdys:
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "ec2:*",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "ec2:ResourceTag/Department": "DevOps"
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowRunInstancesWithTag",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestTag/Department": "DevOps"
+                },
+                "ForAllValues:StringEquals": {
+                    "aws:TagKeys": [
+                        "Department"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "AllowRunInstancesOnAssociatedResources",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": [
+                "arn:aws:ec2:eu-north-1:318043933524:security-group/*",
+                "arn:aws:ec2:eu-north-1:318043933524:subnet/*",
+                "arn:aws:ec2:eu-north-1::image/*",
+                "arn:aws:ec2:eu-north-1:318043933524:network-interface/*",
+                "arn:aws:ec2:eu-north-1:318043933524:volume/*",
+                "arn:aws:ec2:eu-north-1:318043933524:key-pair/*"
+            ]
+        },
+        {
+            "Sid": "AllowCreateTagsOnLaunch",
+            "Effect": "Allow",
+            "Action": "ec2:CreateTags",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "ec2:CreateAction": "RunInstances",
+                    "aws:RequestTag/Department": "DevOps"
+                },
+                "ForAllValues:StringEquals": {
+                    "aws:TagKeys": [
+                        "Department"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "AllowSecurityGroupCreation",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateSecurityGroup",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:DescribeSecurityGroups"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AllowEC2Describe",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeInstances",
+                "ec2:DescribeImages",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVpcs",
+                "ec2:DescribeInstanceTypes",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeKeyPairs"
+            ],
+            "Resource": "*"
         }
-      }
-    }
-  ]
+    ]
 }
+
 ```
 - Priskirkite šią politiką naudotojui arba grupei – tai ABAC naudojimas realiame scenarijuje.
 
@@ -214,11 +276,4 @@ Naudojant Ansible `community.aws` kolekciją, galima automatizuoti IAM naudotoj�
         state: present
 ```
 
-**Pastabos:**
-- Politiką galima papildyti sąlygomis (pvz., tik tam tikrame regione, tik su tam tikrais žymėjimais).
-- Galima naudoti ir kaip Service Account CI/CD įrankiui, kuris deployina EC2 instancus.
-
----
-
-Jei pageidauji – galiu pridėti papildomą YAML ar Terraform pavyzdį, kad parodytum studentams realią konfigūraciją. 🙂
 
