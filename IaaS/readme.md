@@ -86,7 +86,18 @@ key_name: demo-key
         name: my-vpc
         cidr_block: 10.0.0.0/16
         region: "{{ region }}"
+        profile: ec2_micro_provisioner
       register: vpc
+
+    - name: Create Internet Gateway
+      amazon.aws.ec2_vpc_igw:
+        state: present
+        region: "{{ region }}"
+        profile: ec2_micro_provisioner
+        vpc_id: "{{ vpc.vpc.id }}"
+        tags:
+          Name: my-vpc-igw
+      register: igw
 
     - name: Create Subnet
       amazon.aws.ec2_vpc_subnet:
@@ -94,7 +105,28 @@ key_name: demo-key
         cidr: 10.0.1.0/24
         az: "{{ region }}a"
         map_public: yes
+        region: "{{ region }}"
+        profile: ec2_micro_provisioner
       register: subnet
+
+    - name: Create Route Table with IGW route
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ region }}"
+        profile: ec2_micro_provisioner
+        tags:
+          Name: my-vpc-rt
+        routes:
+          - destination_cidr_block: 0.0.0.0/0
+            gateway_id: "{{ igw.gateway_id }}"
+      register: route_table
+
+    - name: Associate Route Table with Subnet (community.aws)
+      community.aws.ec2_vpc_route_table_association:
+        subnet_id: "{{ subnet.subnet.id }}"
+        route_table_id: "{{ route_table.route_table.id }}"
+        region: "{{ region }}"
+        profile: ec2_micro_provisioner
 
     - name: Create Security Group
       amazon.aws.ec2_group:
@@ -102,6 +134,7 @@ key_name: demo-key
         description: Allow SSH
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ region }}"
+        profile: ec2_micro_provisioner
         rules:
           - proto: tcp
             from_port: 22
@@ -114,16 +147,17 @@ key_name: demo-key
         name: demo-linux
         key_name: "{{ key_name }}"
         region: "{{ region }}"
+        profile: ec2_micro_provisioner
         instance_type: "{{ instance_type }}"
         image_id: "{{ ami_id }}"
         vpc_subnet_id: "{{ subnet.subnet.id }}"
         security_group: "{{ sg.group_id }}"
         wait: yes
-        assign_public_ip: yes
         volumes:
           - device_name: /dev/xvda
-            volume_size: 8
-            delete_on_termination: true
+            ebs:
+              volume_size: 8
+              delete_on_termination: true
       register: ec2
 
     - name: Output EC2 Public IP
