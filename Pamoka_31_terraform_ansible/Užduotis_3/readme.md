@@ -1,110 +1,134 @@
-# 🛠️ Užduotis 3 – CRD Jenkins diegimas naudojant FluxCD (be GitOps)
+# 🛠️ Užduotis – Jenkins diegimas naudojant `runner.sh` (su FluxCD, be GitOps)
 
-Šiame vadove parodoma, kaip įdiegti Jenkins naudojant FluxCD CLI be GitOps (t. y. be CRD saugojimo Git'e). Vietoje to, diegimo manifestai (`HelmRepository` ir `HelmRelease`) sugeneruojami bei pritaikomi rankiniu būdu.
+Šiame vadove parodoma, kaip automatiškai įdiegti Jenkins į MicroK8s klasterį EC2 serveryje naudojant `runner.sh` skriptą. Įdiegimas atliekamas naudojant FluxCD, tačiau **be GitOps** – Helm CRD (HelmRepository ir HelmRelease) yra šablonuojami per Ansible.
 
 ---
 
 ## 🎯 Reikalavimai
 
-- Veikiantis Kubernetes klasteris
-- Įdiegtas FluxCD
-- Įdiegtas `flux` CLI
-- Įdiegtas `helm`
+- Turite prieigą prie AWS (naudojamas EC2)
+- Turite Cloudflare domeną DNS įrašų kūrimui
+- Įrašyti: `terraform`, `ansible`, `kubectl`
+- Failas `config/infra.config.json` su AWS ir SSH informacija
 
----
+> `jq` ir `awscli` nėra būtini, jei EC2 paleidžiate tik per `runner.sh`, bet `jq` naudojamas konfigūracijos reikšmėms nuskaityti iš JSON.
 
-## 1 žingsnis – Pridėti Jenkins Helm repozitoriją
+### 📁 Projekto struktūra:
 
-```bash
-helm repo add jenkins https://charts.jenkins.io
+```
+.
+├── runner.sh                       # Main CLI for managing infrastructure
+├── terraform/
+│   ├── aws/                        # EC2 provisioning logic
+│   └── cloudflare/                # DNS record logic
+├── config/
+│   └── infra.config.json          # AWS key, region, user config
+├── ansible/
+│   ├── playbook/
+│   │   ├── playbook.yml           # Base installer: MicroK8s + FluxCD
+│   │   ├── install_tool.yml       # Tool installer (runs role service-<tool>)
+│   │   └── uninstall_tool.yml     # Tool remover
+│   └── roles/
+│       ├── service-<tool>         # Tool-specific logic
+│       ├── common-*               # Shared modules like microk8s, fluxcd
+│       └── service-tool-installer # Template-based tool installation
+└── setup-deps/
+    └── install_deps.sh            # Optional: installs Ansible/Terraform locally
 ```
 
 ---
 
-## 2 žingsnis – Atsisiųsti ir paredaguoti `values.yaml`
+## 1 žingsnis – Paleisti Jenkins diegimą
 
 ```bash
-helm show values jenkins/jenkins > jenkins-values.yaml
+./runner.sh -a create --name jenkins-instance --domain jenkins.devplay.art --tool jenkins
 ```
 
-> Redaguokite šį failą ir pašalinkite nereikalingus parametrus (pvz. persistence, resource limits), taip pat nustatykite administratoriaus slaptažodį ir pan.
+Ši komanda:
+- Provisionuoja EC2 instanciją AWS'e
+- Įdiegia MicroK8s ir FluxCD
+- Įdiegia Jenkins naudojant Ansible (`install_tool.yml`)
+- Sukuria Cloudflare DNS įrašą
 
 ---
 
-## 3 žingsnis – Sukurti `HelmRepository` resursą (FluxCD Source Controller)
+## 2 žingsnis – Jenkins CRD šablonas
 
-```bash
-flux create source helm jenkins   --url=https://charts.jenkins.io   --interval=10m   --export > jenkins-helmrepo.yaml
+Failas `jenkins-crd.yaml.j2` turi būti patalpintas į:
+
+```
+ansible/roles/service-tool-installer/templates/jenkins-crd.yaml.j2
 ```
 
----
-
-## 4 žingsnis – Sukurti `HelmRelease` resursą (FluxCD Helm Controller)
-
-```bash
-flux create helmrelease jenkins   --interval=10m   --release-name=jenkins   --source=HelmRepository/jenkins   --chart=jenkins   --namespace=jenkins   --values=./jenkins-values.yaml   --export > jenkins-helmrelease.yaml
-```
-
----
-
-## 5 žingsnis – Sukurti `jenkins-crd.yaml.j2` failą naudoti su Ansible
-
-Šiame žingsnyje sujungiame abu sugeneruotus CRD (`HelmRepository` ir `HelmRelease`) į vieną Jinja2 šabloną pavadinimu `jenkins-crd.yaml.j2`.
-
-### Komandos:
-
-```bash
-cat jenkins-helmrepo.yaml > jenkins-crd.yaml.j2
-echo "---" >> jenkins-crd.yaml.j2
-cat jenkins-helmrelease.yaml >> jenkins-crd.yaml.j2
-```
-
-### Redagavimas:
-
-Atidarykite `jenkins-crd.yaml.j2` ir pataisykite šias reikšmes:
-
-- `namespace`
-- `releaseName`
-- `chart` versiją (jei reikia)
-- `values.yaml` kelią (jei šablonuojama)
-- **Svarbiausia – įrašykite tinkamą Ingress host vardą:**
+Jis turi būti Jinja2 šablonas su bent tokiais laukais:
 
 ```yaml
-controller:
-  ingress:
-    enabled: true
-    hostName: "{{ domain }}"
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: HelmRepository
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  interval: 10m
+  url: https://charts.jenkins.io
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  interval: 10m
+  releaseName: jenkins
+  chart:
+    spec:
+      chart: jenkins
+      sourceRef:
+        kind: HelmRepository
+        name: jenkins
+        namespace: jenkins
+  values:
+    controller:
+      ingress:
+        enabled: true
+        hostName: "{{ domain }}"
 ```
 
-> Pakeiskite `{{ domain }}` į konkretų vardą arba naudokite Jinja2 kintamąjį, jei failas bus šablonuojamas per Ansible., musu atveju mes pasiduodame is runner.sh `domain`
-
-### Failo vieta:
-
-Įkelkite `jenkins-crd.yaml.j2` į Ansible `templates/` katalogą.
-
 ---
 
-## 6 žingsnis – Pritaikyti `jenkins-crd.yaml.j2` klasteryje
+## 3 žingsnis – Patikrinti, ar Jenkins įdiegtas
 
 ```bash
-kubectl apply -f jenkins-crd.yaml.j2
-```
-
----
-
-## 7 žingsnis – Naudoti su Ansible , tokiu pačiu principu kaip ir podinfo
-
-Naudokite `jenkins-crd.yaml.j2` kaip šabloną `templates/` kataloge, kai automatizuojate diegimą per Ansible.
-
----
-
-## 8 žingsnis – Patikrinti diegimą (neprivaloma kai naudojame ansible)
-
-```bash
-kubectl get helmrelease -n jenkins
 kubectl get pods -n jenkins
+kubectl get helmrelease -n jenkins
 ```
 
 ---
 
-Sėkmingai! 🎉 Jenkins dabar turėtų veikti jūsų Kubernetes klasteryje ir būti valdomas FluxCD.
+## 4 žingsnis – Pašalinti tik Jenkins
+
+```bash
+./runner.sh --name jenkins-instance --domain jenkins.devplay.art --tool jenkins --destroy
+```
+
+Tai:
+- Ištrins HelmRelease ir susijusius resursus
+- Pašalins DNS įrašą
+- EC2 paliks nepaliestą
+
+---
+
+## 5 žingsnis – Visiškai pašalinti infrastruktūrą
+
+```bash
+./runner.sh -a delete --name jenkins-instance --domain jenkins.devplay.art
+```
+
+Tai pašalins:
+- Jenkins (jei nurodytas `--tool`)
+- EC2 instanciją
+- Cloudflare DNS įrašus
+
+---
+
+Sėkmingai! 🎉 Jenkins turėtų būti automatiškai įdiegtas jūsų klasteryje ir valdomas FluxCD be GitOps.
