@@ -8,10 +8,36 @@
 
 - Turite prieigą prie AWS (naudojamas EC2)
 - Turite Cloudflare domeną DNS įrašų kūrimui
+- Veikiantis Kubernetes klasteris
+- Įdiegtas FluxCD
+- Įdiegtas `flux` CLI
+- Įdiegtas `helm`
 - Įrašyti: `terraform`, `ansible`, `kubectl`
 - Failas `config/infra.config.json` su AWS ir SSH informacija
 
 > `jq` ir `awscli` nėra būtini, jei EC2 paleidžiate tik per `runner.sh`, bet `jq` naudojamas konfigūracijos reikšmėms nuskaityti iš JSON.
+
+> Jenkins CRD (`HelmRepository` ir `HelmRelease`) šablonus galima generuoti naudojant `flux` CLI ir `helm show values`, o tada pritaikyti su Ansible. Analogiškai kaip ir su Podinfo, naudokite `--export` vėliavėlę, kad sugeneruoti failai būtų integruojami į jūsų infrastruktūrą:
+
+```bash
+helm show values jenkins/jenkins > jenkins-values.yaml
+
+flux create source helm jenkins \
+  --url=https://charts.jenkins.io \
+  --interval=10m \
+  --export > jenkins-helmrepo.yaml
+
+flux create helmrelease jenkins \
+  --interval=10m \
+  --release-name=jenkins \
+  --source=HelmRepository/jenkins \
+  --chart=jenkins \
+  --namespace=jenkins \
+  --values=./jenkins-values.yaml \
+  --export > jenkins-helmrelease.yaml
+```
+
+---
 
 ### 📁 Projekto struktūra:
 
@@ -82,14 +108,9 @@ spec:
   releaseName: jenkins
   chart:
     spec:
-      chart: jenkins
-      sourceRef:
-        kind: HelmRepository
-        name: jenkins
-        namespace: jenkins
+.......
   values:
-    controller:
-      ingress:
+.......
         enabled: true
         hostName: "{{ domain }}"
 ```
@@ -132,3 +153,4 @@ Tai pašalins:
 ---
 
 Sėkmingai! 🎉 Jenkins turėtų būti automatiškai įdiegtas jūsų klasteryje ir valdomas FluxCD be GitOps.
+
