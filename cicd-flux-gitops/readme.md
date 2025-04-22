@@ -125,6 +125,65 @@ values:
           - path: /
             pathType: Prefix
 ```
+### pridet nginx
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx-ingress
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: nginx
+  namespace: nginx-ingress
+spec:
+  url: https://helm.nginx.com/stable
+  interval: 10m
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nginx-ingress
+  namespace: nginx-ingress
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: nginx-ingress
+      version: 2.1.0
+      sourceRef:
+        kind: HelmRepository
+        name: nginx
+        namespace: nginx-ingress
+  values:
+    controller:
+      name: controller
+      kind: deployment
+      nginxplus: false
+      replicaCount: 1
+      ingressClass:
+        name: nginx
+        create: true
+      service:
+        create: true
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+      nginxStatus:
+        enable: true
+        port: 8080
+        allowCidrs: "127.0.0.1"
+      readyStatus:
+        enable: true
+        port: 8081
+    rbac:
+      create: true
+      clusterrole:
+        create: true
+    prometheus:
+      create: true
+```
+
 
 ### 2. Jenkins
 - Helm repo: `https://charts.jenkins.io`
