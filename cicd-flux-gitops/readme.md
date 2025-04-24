@@ -208,7 +208,7 @@ Sėkmės įvaldant GitOps! 🚀
 
 # 📦 Helm Chart for `yourapp`
 
-This README provides step-by-step instructions to generate, configure, and deploy a Helm chart for `yourapp`, including how to build the Docker image, fix template issues, and verify the deployment. It includes workflows for publishing the Helm chart via **GitHub Actions** and **GitLab Pages**.
+
 
 ---
 
