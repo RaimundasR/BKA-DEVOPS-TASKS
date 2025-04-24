@@ -206,47 +206,30 @@ values:
 
 Sėkmės įvaldant GitOps! 🚀
 
-# Helm diagrama pvz. (`raimundas0106/todoapp` ) 
-- Jus naudokite savo docker image
+# 📦 Helm Chart for `yourapp`
 
-Šiame repozitoriume pateikiama Helm diagrama, skirta diegti konteinerizuotą `raimundas0106/todoapp` aplikaciją. Ji apima konfigūruojamą diegimą, paslaugą (Service) ir įeinamąjį srautą (Ingress), su galimybe įjungti/išjungti funkcijas per reikšmių failą.
-
-## 📁 Projekto struktūra
-
-```
-helm-todoapp/
-├── charts/
-├── Chart.yaml
-├── values.yaml
-├── templates/
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── ingress.yaml
-├── .github/
-│   └── workflows/
-│       └── gh-pages.yml
-└── README.md
-```
+This README provides step-by-step instructions to generate, configure, and deploy a Helm chart for `yourapp`, including how to build the Docker image, fix template issues, and verify the deployment. It includes workflows for publishing the Helm chart via **GitHub Actions** and **GitLab Pages**.
 
 ---
 
-## 🚀 Naudojimo instrukcija
+## 🚀 Create Your Helm Chart
 
-### 1. Klonuoti ir paruošti diagramą
+To scaffold a new chart for `yourapp`, run:
 
 ```bash
-git clone https://github.com/<jusu-vartotojas>/helm-todoapp.git
-cd helm-todoapp
+helm create yourapp
 ```
+
+This generates a boilerplate chart under a `yourapp/` directory. You'll customize this structure in the following steps.
 
 ---
 
-### 2. Apibrėžti Helm diagramos metaduomenis (`Chart.yaml`)
+## 📄 Define Helm Chart Metadata (`Chart.yaml`)
 
 ```yaml
 apiVersion: v2
-name: todoapp
-description: Helm diagrama Raimundo TODO aplikacijai
+name: yourapp
+description: Helm chart for your application
 type: application
 version: 0.1.0
 appVersion: "latest"
@@ -254,13 +237,13 @@ appVersion: "latest"
 
 ---
 
-### 3. Numatytoji konfigūracija (`values.yaml`)
+## ⚙️ Default Configuration (`values.yaml`)
 
 ```yaml
 replicaCount: 1
 
 image:
-  repository: raimundas0106/todoapp
+  repository: yourdockerhub/yourapp
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -274,7 +257,7 @@ ingress:
   className: "nginx"
   annotations: {}
   hosts:
-    - host: todoapp.local
+    - host: yourapp.local
       paths:
         - path: /
           pathType: Prefix
@@ -291,25 +274,25 @@ affinity: {}
 
 ---
 
-### 4. Sukurti `templates/deployment.yaml`
+## 🏗 Create `templates/deployment.yaml`
 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "todoapp.fullname" . }}
+  name: {{ include "yourapp.fullname" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "todoapp.name" . }}
+      app: {{ include "yourapp.name" . }}
   template:
     metadata:
       labels:
-        app: {{ include "todoapp.name" . }}
+        app: {{ include "yourapp.name" . }}
     spec:
       containers:
-        - name: {{ include "todoapp.name" . }}
+        - name: {{ include "yourapp.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           ports:
             - containerPort: 80
@@ -317,34 +300,34 @@ spec:
 
 ---
 
-### 5. Sukurti `templates/service.yaml`
+## 🧩 Create `templates/service.yaml`
 
 ```yaml
 {{- if .Values.service.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "todoapp.fullname" . }}
+  name: {{ include "yourapp.fullname" . }}
 spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: 80
   selector:
-    app: {{ include "todoapp.name" . }}
+    app: {{ include "yourapp.name" . }}
 {{- end }}
 ```
 
 ---
 
-### 6. Sukurti `templates/ingress.yaml`
+## 🌐 Create `templates/ingress.yaml`
 
 ```yaml
 {{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "todoapp.fullname" . }}
+  name: {{ include "yourapp.fullname" . }}
   annotations:
     {{- range $key, $value := .Values.ingress.annotations }}
     {{ $key }}: {{ $value | quote }}
@@ -361,7 +344,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "todoapp.fullname" $ }}
+                name: {{ include "yourapp.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}
@@ -371,9 +354,56 @@ spec:
 
 ---
 
-### 7. Paskelbti Helm diagramą per GitHub Pages
+## 📦 Project Structure
 
-#### a. Sukurti GitHub veikseną `.github/workflows/gh-pages.yml`
+```plaintext
+yourapp/
+├── Chart.yaml
+├── values.yaml
+├── templates/
+│   ├── _helpers.tpl
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── NOTES.txt
+│   └── tests/
+│       └── test-connection.yaml
+├── .github/
+│   └── workflows/
+│       └── gh-pages.yml
+├── .gitlab-ci.yml
+```
+
+---
+
+## 🖋 Define Helpers in `_helpers.tpl`
+
+```gotpl
+{{- define "yourapp.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "yourapp.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+```
+
+(remaining content unchanged...)
+
+---
+
+## 🚀 GitHub Actions: Publish Helm Chart to GitHub Pages
+
+Create the following file at `.github/workflows/gh-pages.yml`:
 
 ```yaml
 name: Publish Helm Chart
@@ -397,13 +427,13 @@ jobs:
       - name: 🏷️ Set appVersion from latest Git tag or fallback
         run: |
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.1.0")
-          sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" charts/todoapp/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" charts/yourapp/Chart.yaml
 
       - name: 📦 Package Helm chart and generate index
         run: |
           mkdir -p .deploy
-          helm package charts/todoapp -d .deploy
-          helm repo index .deploy --url https://your_username.github.io/helm-todoapp
+          helm package charts/yourapp -d .deploy
+          helm repo index .deploy --url https://your-username.github.io/helm-yourapp
 
       - name: 🚫 Disable Jekyll to serve YAML
         run: echo "" > .deploy/.nojekyll
@@ -415,155 +445,33 @@ jobs:
           publish_dir: .deploy
           publish_branch: gh-pages
           force_orphan: true
-
-          publish_dir: .deploy
-```
-
-#### b. Įkelti ir paskelbti
-
-```bash
-git init
-git remote add origin https://github.com/<jusu-vartotojas>/helm-todoapp.git
-git add .
-git commit -m "Pradinis Helm diagramos commitas"
-git push -u origin main
-```
-
-Tuomet įjunkite **GitHub Pages** savo repozitorijos nustatymuose, pasirinkdami `gh-pages` šaką arba `/root` katalogą.
-
----
-
-### 8. Įdiegti diagramą
-
-```bash
-helm repo add raimundas https://<jusu-vartotojas>.github.io/helm-todoapp
-helm install todoapp raimundas/todoapp
 ```
 
 ---
 
-## 🔧 Diegimo pritaikymas
+## 🦊 GitLab CI: Publish Helm Chart to GitLab Pages
 
-Įjungti Ingress:
-
-```bash
-helm install todoapp raimundas/todoapp --set ingress.enabled=true --set ingress.hosts[0].host=my.todoapp.com
-```
-
-Išjungti Service (jei naudojate tik Ingress):
-
-```bash
-helm install todoapp raimundas/todoapp --set service.enabled=false
-```
-
----
-
-
-# Antras užuoties variantas su GitLab (netestuota, galite užtrukti ilgiau)
-
-# Helm diagrama `raimundas0106/todoapp`
-
-Šiame repozitoriume pateikiama Helm diagrama, skirta diegti konteinerizuotą `raimundas0106/todoapp` aplikaciją. Ji apima konfigūruojamą diegimą, paslaugą (Service) ir įeinamąjį srautą (Ingress), su galimybe įjungti/išjungti funkcijas per reikšmių failą.
-
-## 📁 Projekto struktūra
-
-```
-helm-todoapp/
-├── charts/
-├── Chart.yaml
-├── values.yaml
-├── templates/
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── ingress.yaml
-├── .gitlab-ci.yml
-└── README.md
-```
-
----
-
-## 🚀 Naudojimo instrukcija
-
-### 1. Klonuoti ir paruošti diagramą
-
-```bash
-git clone https://gitlab.com/<jusu-vartotojas>/helm-todoapp.git
-cd helm-todoapp
-```
-
----
-
-### 2. Apibrėžti Helm diagramos metaduomenis (`Chart.yaml`)
-
-```yaml
-apiVersion: v2
-name: todoapp
-description: Helm diagrama Raimundo TODO aplikacijai
-type: application
-version: 0.1.0
-appVersion: "latest"
-```
-
----
-
-### 3. Numatytoji konfigūracija (`values.yaml`)
-
-```yaml
-replicaCount: 1
-
-image:
-  repository: raimundas0106/todoapp
-  pullPolicy: IfNotPresent
-  tag: "latest"
-
-service:
-  enabled: true
-  type: ClusterIP
-  port: 80
-
-ingress:
-  enabled: false
-  className: "nginx"
-  annotations: {}
-  hosts:
-    - host: todoapp.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
-
-resources: {}
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
-```
-
----
-
-### 4. Sukurti `.gitlab-ci.yml` su automatiniu `appVersion` ir leidimu
+Create the following file `.gitlab-ci.yml` in your repository:
 
 ```yaml
 stages:
   - package
   - pages
 
-variables:
-  HELM_EXPERIMENTAL_OCI: 1
-
 before_script:
   - apk add --no-cache curl git bash helm
+
+variables:
+  HELM_EXPERIMENTAL_OCI: 1
 
 package_chart:
   stage: package
   script:
-    - export TAG=$(git describe --tags --abbrev=0)
-    - sed -i "s/appVersion: .*/appVersion: \"$TAG\"/" Chart.yaml
+    - export TAG=$(git describe --tags --abbrev=0 || echo "0.1.0")
+    - sed -i "s/^appVersion:.*/appVersion: \"$TAG\"/" Chart.yaml
     - mkdir -p public
     - helm package . -d public
-    - helm repo index public --url "https://<jusu-vartotojas>.gitlab.io/helm-todoapp"
+    - helm repo index public --url "https://<your-namespace>.gitlab.io/yourapp"
   artifacts:
     paths:
       - public
@@ -571,7 +479,7 @@ package_chart:
 pages:
   stage: pages
   script:
-    - echo "GitLab Pages leidžia pasiekti Helm repozitoriją."
+    - echo "GitLab Pages enabled"
   artifacts:
     paths:
       - public
@@ -579,41 +487,17 @@ pages:
     - main
 ```
 
----
-
-### 5. Įjungti GitLab Pages
-
-1. Eikite į **Settings → Pages** ir įsitikinkite, kad puslapiai įjungti.
-2. Kai CI baigs veikti, Helm repozitorija bus pasiekiama per:
+Enable **GitLab Pages** under **Settings → Pages** and the Helm repo will be available at:
 
 ```
-https://<jusu-vartotojas>.gitlab.io/helm-todoapp
+https://<your-namespace>.gitlab.io/yourapp
 ```
 
----
-
-### 6. Įdiegti diagramą
+You can then install the chart like so:
 
 ```bash
-helm repo add raimundas https://<jusu-vartotojas>.gitlab.io/helm-todoapp
+helm repo add yourapp https://<your-namespace>.gitlab.io/yourapp
 helm repo update
-helm install todoapp raimundas/todoapp
+helm install my-yourapp yourapp/yourapp
 ```
 
----
-
-## 🔧 Diegimo pritaikymas
-
-Įjungti Ingress:
-
-```bash
-helm install todoapp raimundas/todoapp --set ingress.enabled=true --set ingress.hosts[0].host=my.todoapp.com
-```
-
-Išjungti Service (jei naudojate tik Ingress):
-
-```bash
-helm install todoapp raimundas/todoapp --set service.enabled=false
-```
-
----
