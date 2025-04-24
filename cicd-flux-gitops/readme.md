@@ -200,25 +200,7 @@ values:
     serviceType: LoadBalancer
 ```
 
-Rekomenduojama slaptažodį saugoti Kubernetes `Secret` objekte.
 
-### 3. Bendras Kustomization
-
-Failas: `clusters/staging/kustomization.yaml`
-```yaml
-resources:
-  - apps/podinfo.yaml
-  - apps/jenkins.yaml
-  - common/nginx.yaml
-```
-
-## 📥 Pristatymas
-
-Iki: _[nurodyta data]_
-
-Pristatykite:
-- Nuorodą į savo GitHub repozitoriją (pvz.: https://github.com/RaimundasR/k8s-flux)
-- Trumpą aprašymą, kaip patikrinote Jenkins ir Podinfo veikimą
 
 ---
 
@@ -404,27 +386,36 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Helm
+      - name: 🛠️ Set up Helm
         uses: azure/setup-helm@v3
 
-      - name: Nustatyti appVersion iš Docker tag
+      - name: 🏷️ Set appVersion from latest Git tag or fallback
         run: |
-          export TAG=$(git describe --tags --abbrev=0)
-          sed -i "s/appVersion: .*/appVersion: \"$TAG\"/" Chart.yaml
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.1.0")
+          sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" charts/todoapp/Chart.yaml
 
-      - name: Package Chart
+      - name: 📦 Package Helm chart and generate index
         run: |
-          helm package . -d .deploy
-          helm repo index .deploy --url https://<jusu-vartotojas>.github.io/helm-todoapp
+          mkdir -p .deploy
+          helm package charts/todoapp -d .deploy
+          helm repo index .deploy --url https://your_username.github.io/helm-todoapp
 
-      - name: Deploy to GitHub Pages
+      - name: 🚫 Disable Jekyll to serve YAML
+        run: echo "" > .deploy/.nojekyll
+
+      - name: 🚀 Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .deploy
+          publish_branch: gh-pages
+          force_orphan: true
+
           publish_dir: .deploy
 ```
 
@@ -468,7 +459,7 @@ helm install todoapp raimundas/todoapp --set service.enabled=false
 ---
 
 
-# Antras užuoties variantas su GitLab
+# Antras užuoties variantas su GitLab (netestuota, galite užtrukti ilgiau)
 
 # Helm diagrama `raimundas0106/todoapp`
 
