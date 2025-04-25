@@ -458,33 +458,38 @@ stages:
   - package
   - pages
 
-before_script:
-  - apk add --no-cache curl git bash helm
-
 variables:
   HELM_EXPERIMENTAL_OCI: 1
 
 package_chart:
   stage: package
+  image: ubuntu:latest
+  before_script:
+    - apt-get update && apt-get install -y curl git bash gnupg lsb-release
+    - curl https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg
+    - echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" > /etc/apt/sources.list.d/helm-stable-debian.list
+    - apt-get update && apt-get install -y helm
   script:
-    - export TAG=$(git describe --tags --abbrev=0 || echo "0.1.0")
+    - TAG=$(git describe --tags --abbrev=0 || echo "0.1.0")
     - sed -i "s/^appVersion:.*/appVersion: \"$TAG\"/" Chart.yaml
     - mkdir -p public
     - helm package . -d public
-    - helm repo index public --url "https://<your-namespace>.gitlab.io/yourapp"
+    - helm repo index public --url "https://your_username.gitlab.io/your_helmchart_app_name&quot;
   artifacts:
     paths:
       - public
 
 pages:
   stage: pages
+  image: ubuntu:latest
   script:
-    - echo "GitLab Pages enabled"
+    - echo "Publishing Helm repo to GitLab Pages"
   artifacts:
     paths:
       - public
-  only:
-    - main
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
 ```
 
 Enable **GitLab Pages** under **Settings → Pages** and the Helm repo will be available at:
