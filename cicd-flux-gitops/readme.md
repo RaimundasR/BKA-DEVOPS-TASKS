@@ -470,11 +470,12 @@ package_chart:
     - echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" > /etc/apt/sources.list.d/helm-stable-debian.list
     - apt-get update && apt-get install -y helm
   script:
-    - TAG=$(git describe --tags --abbrev=0 || echo "0.1.0")
-    - sed -i "s/^appVersion:.*/appVersion: \"$TAG\"/" Chart.yaml
-    - mkdir -p public
-    - helm package . -d public
-    - helm repo index public --url "https://your_username.gitlab.io/your_helmchart_app_name&quot;
+    - >
+      TAG=$(git describe --tags --abbrev=0 || echo "0.1.0"); 
+      sed -i "s/^appVersion:.*/appVersion: \"$TAG\"/" Chart.yaml; 
+      mkdir -p public; 
+      helm package . -d public; 
+      helm repo index public --url $CI_PAGES_URL
   artifacts:
     paths:
       - public
@@ -490,6 +491,7 @@ pages:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: always
+
 ```
 
 Enable **GitLab Pages** under **Settings → Pages** and the Helm repo will be available at:
